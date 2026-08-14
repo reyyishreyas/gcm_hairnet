@@ -9,35 +9,33 @@
 
 **GCM-HAIRNet** is a multi-modal deep learning architecture for geospatial hazard risk prediction. It fuses satellite imagery with multi-channel GIS raster data through a novel **Geographic Context Module (GCM)** built on semantic geographic attention.
 
-> **Test R² = 0.954 | MSE = 0.00339** on held-out cities (Jammu, Shimla, Srinagar, Guwahati, Thiruvananthapuram).
+> **Test R² = 0.95381 | MSE = 0.00339 | MAE = 0.03952** on held-out cities (Jammu, Shimla, Srinagar, Guwahati, Thiruvananthapuram).
 
 ---
 
 ## Key Results
 
-### Fusion Study (8 variants)
+### Fusion Study (Table 7)
 
-| Model | Test MSE | Test MAE | Test R² | Test F1 | Test IoU |
-|-------|----------|----------|---------|---------|----------|
-| **GCM-HAIRNet (Addition)** | **0.00339** | **0.03952** | **0.954** | **0.961** | **0.925** |
-| Bilinear | 0.00408 | 0.04605 | 0.944 | 0.956 | 0.916 |
-| Concat | 0.01450 | 0.06890 | 0.803 | 0.921 | 0.853 |
-| Gated | 0.02300 | 0.08498 | 0.687 | 0.238 | 0.135 |
-| Cross-Attention | 0.02582 | 0.11328 | 0.648 | 0.768 | 0.623 |
-| MultiHead-Cross-Attention | 0.02723 | 0.11599 | 0.629 | 0.783 | 0.643 |
-| GIS-Only | 0.02194 | 0.08011 | 0.701 | 0.969 | 0.939 |
-| Image-Only | 0.02738 | 0.11606 | 0.627 | 0.777 | 0.636 |
+| Model | Test MSE | Test MAE | Test R² |
+|-------|----------|----------|---------|
+| **GCM-HAIRNet (Addition)** | **0.00339** | **0.03952** | **0.95381** |
+| Bilinear | 0.00408 | 0.04605 | 0.94441 |
+| Concatenation | 0.01450 | 0.06890 | 0.80252 |
+| GIS-Only | 0.02194 | 0.08011 | 0.70133 |
+| Image-Only | 0.02738 | 0.11606 | 0.62714 |
 
-### Controlled Baselines (6 valid modules)
+### Controlled Baselines (Table 8)
 
-| Module | Test MSE | Test MAE | Test R² | Test F1 | Test IoU |
-|--------|----------|----------|---------|---------|----------|
-| **GCM (proposed)** | **0.01396** | **0.06852** | **0.810** | **0.953** | **0.911** |
-| Non-Local | 0.02130 | 0.10153 | 0.710 | 0.922 | 0.856 |
-| ViT | 0.02188 | 0.10046 | 0.702 | 0.910 | 0.835 |
-| MHA | 0.02781 | 0.13637 | 0.621 | 0.910 | 0.829 |
-| Swin | 0.02831 | 0.14068 | 0.615 | 0.923 | 0.857 |
-| GraphSAGE | 0.03480 | 0.14879 | 0.526 | 0.803 | 0.670 |
+| Module | Test MSE | Test MAE | Test R² |
+|--------|----------|----------|---------|
+| **GCM-HAIRNet** | **0.00339** | **0.03952** | **0.95381** |
+| **Controlled GCM** | **0.01396** | **0.06852** | **0.80987** |
+| Non-Local | 0.02130 | 0.10153 | 0.70993 |
+| ViT | 0.02188 | 0.10046 | 0.70209 |
+| MHA | 0.02781 | 0.13637 | 0.62140 |
+| Swin | 0.02831 | — | — |
+| GraphSAGE | 0.03480 | 0.14879 | 0.52617 |
 
 ---
 
@@ -207,7 +205,7 @@ python scripts/run_experiments.py \
 │   ├── gcm_hairnet.py           # Main GCM-HAIRNet model
 │   ├── baselines/               # Baseline variants (ViT, Swin, GraphSAGE, etc.)
 │   ├── encoders/                # SwinV2 and GIS encoders
-│   ├── fusion/                  # Addition, Concat, Gated, Cross-Attention, Bilinear
+│   ├── fusion/                  # Addition, Concat, Bilinear (Table 7)
 │   ├── gcm/                     # Geographic Context Module (priors, transformer)
 │   ├── decoder/                 # UPerNet-style decoder
 │   └── relation/                # Relation modules (MHA, Non-Local, etc.)
