@@ -3,7 +3,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python"/>
   <img src="https://img.shields.io/badge/PyTorch-2.0%2B-red" alt="PyTorch"/>
-  <img src="https://img.shields.io/badge/License-MIT-green" alt="License"/>
   <img src="https://img.shields.io/badge/Status-Production-brightgreen" alt="Status"/>
 </p>
 
@@ -241,7 +240,6 @@ python scripts/run_experiments.py \
 ├── environment.yml              # Conda environment
 ├── requirements.txt             # pip dependencies
 ├── CITATION.cff                 # Citation metadata
-├── LICENSE                      # MIT License
 └── CONTRIBUTING.md              # Contribution guidelines
 ```
 
@@ -354,12 +352,6 @@ Per-model predictions and risk maps are in [`outputs/experiments/{model}/{split}
   version = {1.0.0}
 }
 ```
-
----
-
-## License
-
-MIT — see [`LICENSE`](LICENSE)
 
 ---
 
