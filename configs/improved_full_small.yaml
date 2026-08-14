@@ -1,0 +1,124 @@
+checkpoint:
+  dir: ./checkpoints/improved_small
+  every_n_epochs: 1
+  monitor: val_loss
+  save_top_k: 3
+  mode: min
+  save_last: true
+dataset:
+  augmentation: true
+  num_workers: 0
+  train_batch_size: 16
+  val_batch_size: 32
+  pin_memory: true
+  prefetch_factor: 2
+  drop_last: true
+  persistent_workers: false
+  test_batch_size: 32
+experiment:
+  name: improved_full_small
+  seed: 42
+  deterministic: true
+  log_level: INFO
+logger:
+  log_dir: ./logs
+  log_every_n_epochs: 1
+  log_every_n_steps: 20
+  project_name: improved_full
+  type: tensorboard
+  use_wandb: false
+model:
+  name: GCM-HAIRNet
+  image_size: 256
+  gis_size: 32
+  image_encoder:
+    depths:
+    - 2
+    - 2
+    - 6
+    - 2
+    drop_path_rate: 0.2
+    embed_dim: 64
+    num_heads:
+    - 2
+    - 4
+    - 8
+    - 16
+    pretrained: true
+    type: swin_transformer
+    window_size: 7
+  gis_encoder:
+    dropout: 0.1
+    hidden_dim: 32
+    input_channels: 18
+    output_dim: 32
+    type: mlp_encoder
+  gct:
+    dropout: 0.1
+    hidden_dim: 64
+    num_heads: 4
+    rel_pos_scale: 0.0
+    type: gated_cross_attention
+  grm:
+    dropout: 0.1
+    hidden_dim: 64
+    num_layers: 2
+    num_relations: 4
+    type: graph_relation_module
+  gcm:
+    dropout: 0.1
+    embed_dim: 256
+    enable: true
+    enable_distance: true
+    enable_learned: true
+    enable_road: true
+    enable_scene_weights: true
+    enable_similarity: true
+    enable_urban: true
+    gate_init: 0.1
+    gis_channels: 18
+    gis_feature_dim: 32
+    grid_size: 16
+    mlp_ratio: 4.0
+    num_blocks: 4
+    num_heads: 8
+    num_semantic_heads: 5
+    scene_weight_hidden: 32
+    sigma_distance: 1.0
+  decoder:
+    dropout: 0.1
+    hidden_dim: 64
+    num_classes: 1
+    type: upernet_decoder
+outputs:
+  root_dir: ./outputs/improved_full
+training:
+  early_stopping:
+    mode: min
+    monitor: val_loss
+    patience: 15
+  epochs: 100
+  gradient_accumulation_steps: 1
+  gradient_clip_val: 1.0
+  optimizer:
+    lr: 0.0001
+    weight_decay: 0.0001
+    betas:
+    - 0.9
+    - 0.999
+  scheduler:
+    type: cosine_annealing
+    T_max: 80
+    eta_min: 1.0e-06
+    warmup_epochs: 5
+  loss:
+    type: combined
+    mse_weight: 1.0
+    l1_weight: 0.5
+    focal_weight: 0.0
+    focal_alpha: 0.25
+    focal_gamma: 2.0
+    huber_weight: 0.5
+    huber_delta: 0.1
+    ssim_weight: 0.5
+    ssim_window_size: 11

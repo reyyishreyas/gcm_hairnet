@@ -1,0 +1,9 @@
+experiment:
+  name: "gcm_hairnet_inference"
+
+inference:
+  checkpoint_path: "./checkpoints/best_model.pt"
+  output_dir: "./outputs/inference"
+  save_predictions: true
+  save_visualizations: true
+  batch_size: 32

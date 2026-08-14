@@ -1,0 +1,147 @@
+experiment:
+  name: "gcm_hairnet"
+  seed: 42
+  deterministic: true
+  log_level: "INFO"
+
+data:
+  root_dir: "./data/processed"
+  images_dir: "images"
+  gis_dir: "gis"
+  labels_dir: "labels"
+  metadata_dir: "metadata"
+  splits_file: "splits.json"
+  normalization_stats: "./data/normalization_stats.json"
+  image_size: 256
+  gis_size: 32
+  num_gis_channels: 18
+
+dataset:
+  train_batch_size: 16
+  val_batch_size: 32
+  test_batch_size: 32
+  num_workers: 4
+  pin_memory: true
+  prefetch_factor: 2
+  drop_last: true
+  persistent_workers: true
+  augmentation: true
+
+model:
+  name: "GCM-HAIRNet"
+  image_encoder:
+    type: "swin_transformer"
+    pretrained: true
+    embed_dim: 128
+    depths: [2, 2, 18, 2]
+    num_heads: [4, 8, 16, 32]
+    window_size: 7
+    drop_path_rate: 0.2
+  gis_encoder:
+    type: "mlp_encoder"
+    input_channels: 18
+    hidden_dim: 64
+    output_dim: 64
+    dropout: 0.2
+  gct:
+    type: "gated_cross_attention"
+    hidden_dim: 128
+    num_heads: 8
+    dropout: 0.2
+  grm:
+    type: "graph_relation_module"
+    hidden_dim: 128
+    num_relations: 4
+    num_layers: 3
+    dropout: 0.2
+  decoder:
+    type: "upernet_decoder"
+    hidden_dim: 128
+    num_classes: 1
+    dropout: 0.2
+  gcm:
+    enable: true
+    embed_dim: 512
+    num_heads: 8
+    num_blocks: 4
+    num_semantic_heads: 5
+    mlp_ratio: 4.0
+    dropout: 0.2
+    gate_init: 0.1
+    sigma_distance: 1.0
+    scene_weight_hidden: 32
+    gis_channels: 18
+    gis_feature_dim: 64
+    grid_size: 16
+    enable_distance: true
+    enable_similarity: true
+    enable_road: true
+    enable_urban: true
+    enable_learned: true
+    enable_scene_weights: true
+
+training:
+  epochs: 100
+  optimizer:
+    type: "adamw"
+    lr: 1.0e-4
+    weight_decay: 1.0e-4
+    betas: [0.9, 0.999]
+  scheduler:
+    type: "cosine_annealing"
+    T_max: 100
+    eta_min: 1.0e-6
+    warmup_epochs: 5
+  loss:
+    type: "combined"
+    mse_weight: 1.0
+    l1_weight: 0.5
+    focal_weight: 0.0
+    focal_alpha: 0.25
+    focal_gamma: 2.0
+    huber_weight: 0.5
+    huber_delta: 0.1
+  gradient_clip_val: 1.0
+  gradient_accumulation_steps: 1
+  early_stopping:
+    patience: 15
+    monitor: "val_loss"
+    mode: "min"
+
+checkpoint:
+  dir: "./checkpoints/gcm"
+  save_top_k: 5
+  monitor: "val_loss"
+  mode: "min"
+  save_last: true
+  every_n_epochs: 10
+
+logger:
+  type: "tensorboard"
+  use_wandb: false
+  log_dir: "./logs"
+  project_name: "gcm_hairnet"
+  log_every_n_steps: 50
+  log_every_n_epochs: 1
+
+cross_validation:
+  folds: 5
+  shuffle: true
+  stratify: true
+
+ablation:
+  modules: ["swin", "gis_encoder", "gct", "grm", "decoder"]
+  strategy: "replace_with_identity"
+
+inference:
+  checkpoint_path: null
+  output_dir: "./outputs/inference"
+  save_predictions: true
+  save_visualizations: true
+  batch_size: 32
+
+outputs:
+  root_dir: "./outputs"
+  save_plots: true
+  save_maps: true
+  save_predictions: true

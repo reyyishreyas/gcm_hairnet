@@ -1,0 +1,32 @@
+model:
+  name: "GCM-HAIRNet"
+  image_encoder:
+    type: "swin_transformer"
+    pretrained: true
+    embed_dim: 128
+    depths: [2, 2, 18, 2]
+    num_heads: [4, 8, 16, 32]
+    window_size: 7
+    drop_path_rate: 0.2
+  gis_encoder:
+    type: "mlp_encoder"
+    input_channels: 18
+    hidden_dim: 64
+    output_dim: 64
+    dropout: 0.1
+  gct:
+    type: "gated_cross_attention"
+    hidden_dim: 128
+    num_heads: 8
+    dropout: 0.1
+  grm:
+    type: "graph_relation_module"
+    hidden_dim: 128
+    num_relations: 4
+    num_layers: 3
+    dropout: 0.1
+  decoder:
+    type: "upernet_decoder"
+    hidden_dim: 128
+    num_classes: 1
+    dropout: 0.1

@@ -1,0 +1,120 @@
+experiment:
+  name: gcm_hairnet_finetune
+dataset:
+  train_batch_size: 4
+  val_batch_size: 4
+  num_workers: 0
+  augmentation: true
+  pin_memory: true
+  prefetch_factor: 2
+  drop_last: true
+  persistent_workers: false
+  test_batch_size: 32
+model:
+  name: GCM-HAIRNet
+  image_encoder:
+    type: swin_transformer
+    pretrained: false
+    embed_dim: 64
+    depths:
+    - 2
+    - 2
+    - 2
+    - 2
+    num_heads:
+    - 2
+    - 4
+    - 8
+    - 16
+    window_size: 7
+    drop_path_rate: 0.3
+  gis_encoder:
+    type: mlp_encoder
+    input_channels: 18
+    hidden_dim: 32
+    output_dim: 32
+    dropout: 0.3
+  gct:
+    type: gated_cross_attention
+    hidden_dim: 64
+    num_heads: 4
+    dropout: 0.3
+  grm:
+    type: graph_relation_module
+    hidden_dim: 64
+    num_relations: 2
+    num_layers: 2
+    dropout: 0.3
+  decoder:
+    type: upernet_decoder
+    hidden_dim: 64
+    num_classes: 1
+    dropout: 0.3
+  gcm:
+    enable: false
+training:
+  epochs: 100
+  optimizer:
+    type: adamw
+    lr: 0.0001
+    weight_decay: 0.0001
+    betas:
+    - 0.9
+    - 0.999
+  scheduler:
+    type: cosine_annealing
+    T_max: 200
+    eta_min: 1.0e-06
+    warmup_epochs: 5
+  loss:
+    type: combined
+    mse_weight: 1.0
+    l1_weight: 0.5
+    focal_weight: 0.0
+    focal_alpha: 0.25
+    focal_gamma: 2.0
+    huber_delta: 0.1
+    huber_weight: 0.5
+  gradient_clip_val: 1.0
+  gradient_accumulation_steps: 2
+  early_stopping:
+    patience: 30
+    monitor: val_loss
+    mode: min
+checkpoint:
+  dir: ./checkpoints/gcm_finetune
+  save_top_k: 3
+  monitor: val_loss
+  mode: min
+  save_last: true
+  every_n_epochs: 10
+logger:
+  type: tensorboard
+  use_wandb: false
+  log_dir: ./logs
+  project_name: gcm_hairnet_finetune
+  log_every_n_steps: 10
+  log_every_n_epochs: 1
+cross_validation:
+  folds: 5
+  shuffle: true
+  stratify: true
+ablation:
+  modules:
+  - swin
+  - gis_encoder
+  - gct
+  - grm
+  - decoder
+  strategy: replace_with_identity
+inference:
+  checkpoint_path: null
+  output_dir: ./outputs/inference
+  save_predictions: true
+  save_visualizations: true
+  batch_size: 8
+outputs:
+  root_dir: ./outputs
+  save_plots: true
+  save_maps: true
+  save_predictions: true

@@ -1,0 +1,298 @@
+# GCM-HAIRNet
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python"/>
+  <img src="https://img.shields.io/badge/PyTorch-2.0%2B-red" alt="PyTorch"/>
+  <img src="https://img.shields.io/badge/License-MIT-green" alt="License"/>
+  <img src="https://img.shields.io/badge/Status-Production-brightgreen" alt="Status"/>
+</p>
+
+**GCM-HAIRNet** is a multi-modal deep learning architecture for geospatial hazard risk prediction. It fuses satellite imagery with multi-channel GIS raster data through a novel **Geographic Context Module (GCM)** built on semantic geographic attention.
+
+> **Test R² = 0.954 | MSE = 0.00339** on held-out cities (Jammu, Shimla, Srinagar, Guwahati, Thiruvananthapuram).
+
+---
+
+## Key Results
+
+### Fusion Study (8 variants)
+
+| Model | Test MSE | Test MAE | Test R² | Test F1 | Test IoU |
+|-------|----------|----------|---------|---------|----------|
+| **GCM-HAIRNet (Addition)** | **0.00339** | **0.03952** | **0.954** | **0.961** | **0.925** |
+| Bilinear | 0.00408 | 0.04605 | 0.944 | 0.956 | 0.916 |
+| Concat | 0.01450 | 0.06890 | 0.803 | 0.921 | 0.853 |
+| Gated | 0.02300 | 0.08498 | 0.687 | 0.238 | 0.135 |
+| Cross-Attention | 0.02582 | 0.11328 | 0.648 | 0.768 | 0.623 |
+| MultiHead-Cross-Attention | 0.02723 | 0.11599 | 0.629 | 0.783 | 0.643 |
+| GIS-Only | 0.02194 | 0.08011 | 0.701 | 0.969 | 0.939 |
+| Image-Only | 0.02738 | 0.11606 | 0.627 | 0.777 | 0.636 |
+
+### Controlled Baselines (6 valid modules)
+
+| Module | Test MSE | Test MAE | Test R² | Test F1 | Test IoU |
+|--------|----------|----------|---------|---------|----------|
+| **GCM (proposed)** | **0.01396** | **0.06852** | **0.810** | **0.953** | **0.911** |
+| Non-Local | 0.02130 | 0.10153 | 0.710 | 0.922 | 0.856 |
+| ViT | 0.02188 | 0.10046 | 0.702 | 0.910 | 0.835 |
+| MHA | 0.02781 | 0.13637 | 0.621 | 0.910 | 0.829 |
+| Swin | 0.02831 | 0.14068 | 0.615 | 0.923 | 0.857 |
+| GraphSAGE | 0.03480 | 0.14879 | 0.526 | 0.803 | 0.670 |
+
+---
+
+## Architecture
+
+```
+Inputs
+├── Image:        (B, 3, 256, 256)
+└── GIS Raster:   (B, 18, 32, 32)
+
+Encoders
+├── SwinTransformerEncoder (pretrained Swin-V2)
+│   └── Output: (B, 256, 128)
+└── GISEncoder (3-layer CNN)
+    └── Output: (B, 256, 64)
+
+Fusion: AdditionFusion
+├── Linear(128→128) + Linear(64→128) + LayerNorm
+└── Element-wise addition → (B, 256, 128)
+
+GCM Pipeline
+├── Conv2d(146→512) + LayerNorm → (B, 512, 16, 16)
+├── GeographicRelationMatrix (5 priors + SceneWeightPredictor)
+│   ├── Distance, Similarity, Road, Urban, Learned
+│   └── GRG = α·D + β·S + γ·R + δ·U + ε·L
+├── GCMTransformer × 4 blocks (8 heads, embed_dim=512)
+└── Conv2d(512→128) → (B, 128, 16, 16)
+
+GraphRelationModule (3 layers)
+└── Output: (B, 256, 128)
+
+Decoder (UPerNet-style)
+├── 3× ConvTranspose2d upsample
+└── Conv2d(16→1) → (B, 1, 256, 256)
+```
+
+**Total Parameters:** ~111M
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for full details.
+
+---
+
+## Installation
+
+### Option 1: Conda (recommended)
+
+```bash
+conda env create -f environment.yml
+conda activate gcm-hairnet
+pip install -e .
+```
+
+### Option 2: pip
+
+```bash
+pip install -r requirements.txt
+pip install -e .
+```
+
+### Verify installation
+
+```bash
+python -c "import torch; print(torch.__version__); from models import build_model; print('OK')"
+```
+
+---
+
+## Dataset
+
+The dataset is **not included** in this repository. Place processed data in `data/processed/`:
+
+```
+data/processed/
+├── images/     # 256×256 satellite/aerial images (.npy)
+├── gis/        # 32×32×18 GIS raster features (.npy)
+├── labels/     # 256×256 risk maps (.npy)
+├── metadata/   # Per-city metadata (JSON)
+└── splits.json # Train/val/test splits
+```
+
+**Splits:** 58 train / 6 val / 5 test cities
+
+---
+
+## Quick Start
+
+### Train the proposed model
+
+```bash
+python scripts/train.py \
+  --config gcm_ablation/full_gcm \
+  --root-dir ./data/processed \
+  --device cuda
+```
+
+### Run inference
+
+```bash
+python scripts/inference.py \
+  --config inference \
+  --checkpoint ./checkpoints/gcm/best.pt \
+  --split test \
+  --output-dir ./outputs/inference
+```
+
+### Evaluate all models
+
+```bash
+python scripts/evaluate_all_baselines.py
+```
+
+### Generate risk maps
+
+```bash
+python scripts/generate_all_risk_maps.py \
+  --output-dir ./outputs/experiments \
+  --splits val test
+```
+
+---
+
+## Repository Structure
+
+```
+├── configs/                     # YAML experiment configs
+│   ├── train.yaml               # Canonical training config
+│   ├── gcm_ablation/            # Ablation configs
+│   ├── baselines/               # Baseline model configs
+│   └── baseline_*.yaml          # Fusion study configs
+├── models/                      # Model implementations
+│   ├── baselines/gcm_hairnet_baseline.py
+│   ├── encoders/                # Swin, GIS encoders
+│   ├── fusion/                  # Addition, Concat, Gated, etc.
+│   ├── gcm/                     # Geographic Context Module
+│   ├── decoder/                 # UPerNet decoder
+│   └── relation/                # ViT, Swin, GraphSAGE, MHA, Non-Local
+├── engine/                      # Trainer, Validator, Tester
+├── losses/                      # Combined loss (MSE + L1 + Huber)
+├── metrics/                     # Regression + classification metrics
+├── datasets/                    # DataLoader + transforms
+├── utils/                       # Config, checkpoint, seed, logger
+├── visualization/               # Risk maps, attention maps, plots
+├── scripts/                     # Training/eval scripts
+│   ├── train.py
+│   ├── test.py
+│   ├── inference.py
+│   ├── evaluate_all_baselines.py
+│   ├── generate_all_risk_maps.py
+│   └── generate_comparison_figure.py
+├── docs/
+│   ├── ARCHITECTURE.md          # Full architecture spec
+│   └── SUMMARY.md               # Audit + reorganization summary
+├── outputs/experiments/         # All experiment outputs (gitignored)
+│   ├── results/                 # Canonical CSV + comparison figures
+│   ├── fusion/                  # Per-model predictions + risk maps
+│   ├── baseline/                # Baseline predictions + risk maps
+│   └── ablation/                # Ablation JSON metrics
+├── checkpoints/                 # Model weights (gitignored)
+├── logs/                        # TensorBoard logs (gitignored)
+├── data/                        # Dataset (gitignored)
+├── environment.yml              # Conda environment
+├── requirements.txt             # pip dependencies
+├── CITATION.cff                 # Citation metadata
+├── LICENSE                      # MIT License
+└── CONTRIBUTING.md              # Contribution guidelines
+```
+
+---
+
+## Reproduction
+
+All experiments use the **same training protocol** for fair comparison:
+
+| Parameter | Value |
+|-----------|-------|
+| Optimizer | AdamW |
+| Learning Rate | 1e-4 |
+| Weight Decay | 1e-4 |
+| Betas | [0.9, 0.999] |
+| Scheduler | CosineAnnealingLR (T_max=100, warmup=5) |
+| Loss | MSE=1.0 + L1=0.5 + Huber=0.5 + Focal=0.0 |
+| Batch Size | 16 train / 32 val |
+| Max Epochs | 100 |
+| Early Stopping | patience=15, monitor=val_loss |
+| Gradient Clipping | 1.0 |
+| Seed | 42 |
+| Deterministic | true |
+
+### Reproduce fusion study
+
+```bash
+# Train all 8 fusion variants
+for config in baseline_image_only baseline_gis_only baseline_concat baseline_addition baseline_gated baseline_cross_attention baseline_multihead_cross_attention baseline_bilinear; do
+    python scripts/train.py --config $config --root-dir ./data/processed --device cuda
+done
+```
+
+### Reproduce controlled baselines
+
+```bash
+for config in baselines/baseline_gcm baselines/baseline_vit baselines/baseline_swin baselines/baseline_graphsage baselines/baseline_mha baselines/baseline_nonlocal; do
+    python scripts/train.py --config $config --root-dir ./data/processed --device cuda
+done
+```
+
+### Evaluate and generate figures
+
+```bash
+# Test all models
+python scripts/evaluate_all_baselines.py
+
+# Generate risk maps
+python scripts/generate_all_risk_maps.py --output-dir ./outputs/experiments
+
+# Generate comparison figures
+python scripts/generate_comparison_figure.py
+python scripts/generate_per_city_comparison.py
+```
+
+---
+
+## Results
+
+All results are in [`outputs/experiments/results/`](outputs/experiments/results/):
+
+- `experiment_results.csv` — Canonical results table
+- `comparison_test_sorted.png` — All models sorted by R²
+- `fusion_comparison_test.png` — Fusion study comparison
+- `baseline_comparison_test.png` — Baseline comparison
+- `metrics_table_test.png` — Metrics summary table
+
+Per-model predictions and risk maps are in [`outputs/experiments/{model}/{split}/`](outputs/experiments/).
+
+---
+
+## Citation
+
+```bibtex
+@software{gcmhairnet2025,
+  title = {GCM-HAIRNet: Geographic Context Multi-Modal Hazard Risk Network},
+  author = {Anonymous},
+  year = {2025},
+  url = {https://github.com/anon/GCM-HAIRNet},
+  version = {1.0.0}
+}
+```
+
+---
+
+## License
+
+MIT — see [`LICENSE`](LICENSE)
+
+---
+
+## Contact
+
+For questions about the architecture or reproduction, open a GitHub issue.

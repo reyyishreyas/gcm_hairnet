@@ -1,0 +1,82 @@
+experiment:
+  name: tiny_cnn_baseline
+dataset:
+  train_batch_size: 8
+  val_batch_size: 8
+  num_workers: 0
+  augmentation: true
+  pin_memory: true
+  prefetch_factor: 2
+  drop_last: true
+  persistent_workers: false
+  test_batch_size: 32
+model:
+  name: TinyRiskCNN
+  type: tiny_cnn
+  input_channels: 18
+  hidden_dim: 32
+  dropout: 0.3
+training:
+  epochs: 100
+  optimizer:
+    type: adamw
+    lr: 0.0001
+    weight_decay: 0.0001
+    betas:
+    - 0.9
+    - 0.999
+  scheduler:
+    type: cosine_annealing
+    T_max: 300
+    eta_min: 1.0e-06
+    warmup_epochs: 5
+  loss:
+    type: combined
+    mse_weight: 1.0
+    l1_weight: 0.5
+    focal_weight: 0.0
+    focal_alpha: 0.25
+    focal_gamma: 2.0
+    huber_delta: 0.1
+    huber_weight: 0.5
+  gradient_clip_val: 1.0
+  gradient_accumulation_steps: 1
+  early_stopping:
+    patience: 50
+    monitor: val_loss
+    mode: min
+checkpoint:
+  dir: ./checkpoints/tiny_cnn
+  save_top_k: 3
+  monitor: val_loss
+  mode: min
+  save_last: true
+  every_n_epochs: 10
+logger:
+  type: tensorboard
+  use_wandb: false
+  log_dir: ./logs
+  project_name: tiny_cnn_baseline
+  log_every_n_steps: 5
+  log_every_n_epochs: 1
+cross_validation:
+  folds: 5
+  shuffle: true
+  stratify: true
+ablation:
+  modules:
+  - encoder
+  - gis_encoder
+  - fusion
+  strategy: replace_with_identity
+inference:
+  checkpoint_path: null
+  output_dir: ./outputs/inference
+  save_predictions: true
+  save_visualizations: true
+  batch_size: 8
+outputs:
+  root_dir: ./outputs
+  save_plots: true
+  save_maps: true
+  save_predictions: true

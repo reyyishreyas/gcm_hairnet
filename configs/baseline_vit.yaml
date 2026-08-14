@@ -1,0 +1,122 @@
+experiment:
+  name: baseline_vit
+  seed: 42
+  deterministic: true
+  log_level: INFO
+data:
+  root_dir: ./data/processed
+  images_dir: images
+  gis_dir: gis
+  labels_dir: labels
+  metadata_dir: metadata
+  splits_file: splits.json
+  normalization_stats: ./data/normalization_stats.json
+  image_size: 256
+  gis_size: 32
+  num_gis_channels: 18
+dataset:
+  train_batch_size: 16
+  val_batch_size: 32
+  test_batch_size: 32
+  num_workers: 4
+  pin_memory: true
+  prefetch_factor: 2
+  drop_last: true
+  persistent_workers: true
+  augmentation: true
+model:
+  name: Baseline-ViT
+  image_encoder:
+    type: vit_base
+    pretrained: true
+    embed_dim: 128
+  gis_encoder:
+    type: mlp_encoder
+    input_channels: 18
+    hidden_dim: 128
+    output_dim: 64
+    dropout: 0.1
+  gct:
+    type: gated_cross_attention
+    hidden_dim: 128
+    num_heads: 8
+    dropout: 0.1
+  grm:
+    type: graph_relation_module
+    hidden_dim: 128
+    num_relations: 4
+    num_layers: 3
+    dropout: 0.1
+  decoder:
+    type: upernet_decoder
+    hidden_dim: 128
+    num_classes: 1
+    dropout: 0.1
+  gcm:
+    enable: false
+training:
+  epochs: 100
+  optimizer:
+    type: adamw
+    lr: 0.0001
+    weight_decay: 0.0001
+    betas:
+    - 0.9
+    - 0.999
+  scheduler:
+    type: cosine_annealing
+    T_max: 100
+    eta_min: 1.0e-06
+    warmup_epochs: 5
+  loss:
+    type: combined
+    mse_weight: 1.0
+    l1_weight: 0.5
+    focal_weight: 0.0
+    focal_alpha: 0.25
+    focal_gamma: 2.0
+    huber_delta: 0.1
+    huber_weight: 0.5
+  gradient_clip_val: 1.0
+  gradient_accumulation_steps: 1
+  early_stopping:
+    mode: min
+    monitor: val_loss
+    patience: 15
+checkpoint:
+  dir: ./checkpoints/baseline/vit
+  save_top_k: 5
+  monitor: val_loss
+  mode: min
+  save_last: true
+  every_n_epochs: 1
+logger:
+  type: tensorboard
+  use_wandb: false
+  log_dir: ./logs
+  project_name: baseline_vit
+  log_every_n_steps: 50
+  log_every_n_epochs: 1
+cross_validation:
+  folds: 5
+  shuffle: true
+  stratify: true
+ablation:
+  modules:
+  - swin
+  - gis_encoder
+  - gct
+  - grm
+  - decoder
+  strategy: replace_with_identity
+inference:
+  checkpoint_path: null
+  output_dir: ./outputs/inference
+  save_predictions: true
+  save_visualizations: true
+  batch_size: 32
+outputs:
+  root_dir: ./outputs
+  save_plots: true
+  save_maps: true
+  save_predictions: true

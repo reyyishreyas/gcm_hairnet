@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use GCM-HAIRNet in your research, please cite it as below."
+title: "GCM-HAIRNet: Geographic Context Multi-Modal Hazard Risk Network"
+authors:
+  - family-names: "Author"
+    given-names: "Anonymous"
+    email: "author@example.com"
+  - family-names: "Collaborators"
+    given-names: "GCM-HAIRNet"
+url: "https://github.com/anon/GCM-HAIRNet"
+repository-code: "https://github.com/anon/GCM-HAIRNet"
+type: software
+license: MIT
+version: 1.0.0
+date-released: "2025-08-13"

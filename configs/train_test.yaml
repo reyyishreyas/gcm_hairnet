@@ -1,0 +1,47 @@
+experiment:
+  name: gcm_hairnet_train
+dataset:
+  train_batch_size: 16
+  val_batch_size: 32
+  num_workers: 4
+  augmentation: true
+  pin_memory: true
+  prefetch_factor: 2
+  drop_last: true
+  persistent_workers: false
+  test_batch_size: 32
+training:
+  epochs: 100
+  optimizer:
+    lr: 0.0001
+    betas:
+    - 0.9
+    - 0.999
+    weight_decay: 0.0001
+  gradient_accumulation_steps: 1
+  early_stopping:
+    mode: min
+    monitor: val_loss
+    patience: 15
+  gradient_clip_val: 1.0
+  loss:
+    focal_alpha: 0.25
+    focal_gamma: 2.0
+    focal_weight: 0.0
+    huber_delta: 0.1
+    huber_weight: 0.5
+    l1_weight: 0.5
+    mse_weight: 1.0
+    type: combined
+  scheduler:
+    T_max: 100
+    eta_min: 1.0e-06
+    type: cosine_annealing
+    warmup_epochs: 5
+checkpoint:
+  dir: ./checkpoints/gcm
+  save_top_k: 5
+  monitor: val_loss
+  every_n_epochs: 1
+  mode: min
+  save_last: true

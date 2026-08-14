@@ -1,0 +1,119 @@
+checkpoint:
+  dir: ./checkpoints/baselines/addition
+  every_n_epochs: 1
+  monitor: val_loss
+  save_top_k: 5
+  mode: min
+  save_last: true
+dataset:
+  augmentation: true
+  num_workers: 4
+  train_batch_size: 16
+  val_batch_size: 32
+  pin_memory: true
+  prefetch_factor: 2
+  drop_last: true
+  persistent_workers: false
+  test_batch_size: 32
+experiment:
+  name: baseline_addition
+logger:
+  log_dir: ./logs
+  log_every_n_epochs: 1
+  log_every_n_steps: 50
+  project_name: baseline_addition
+  type: tensorboard
+  use_wandb: false
+model:
+  decoder:
+    dropout: 0.2
+    hidden_dim: 128
+    num_classes: 1
+    type: upernet_decoder
+  fusion:
+    dropout: 0.2
+    type: addition
+  gcm:
+    dropout: 0.2
+    embed_dim: 512
+    enable: true
+    enable_distance: true
+    enable_learned: true
+    enable_road: true
+    enable_scene_weights: true
+    enable_similarity: true
+    enable_urban: true
+    gate_init: 0.1
+    gis_channels: 18
+    gis_feature_dim: 64
+    grid_size: 16
+    mlp_ratio: 4.0
+    num_blocks: 4
+    num_heads: 8
+    num_semantic_heads: 5
+    scene_weight_hidden: 32
+    sigma_distance: 1.0
+  gct:
+    dropout: 0.2
+    hidden_dim: 128
+    num_heads: 8
+    type: gated_cross_attention
+  gis_encoder:
+    dropout: 0.2
+    hidden_dim: 64
+    input_channels: 18
+    output_dim: 64
+    type: mlp_encoder
+  grm:
+    dropout: 0.2
+    hidden_dim: 128
+    num_layers: 3
+    num_relations: 4
+    type: graph_relation_module
+  image_encoder:
+    depths:
+    - 2
+    - 2
+    - 18
+    - 2
+    drop_path_rate: 0.2
+    embed_dim: 128
+    num_heads:
+    - 4
+    - 8
+    - 16
+    - 32
+    pretrained: true
+    type: swin_transformer
+    window_size: 7
+  name: BaselineModel
+outputs:
+  root_dir: ./outputs/baselines/addition
+training:
+  early_stopping:
+    mode: min
+    monitor: val_loss
+    patience: 15
+  epochs: 100
+  gradient_accumulation_steps: 1
+  loss:
+    focal_alpha: 0.25
+    focal_gamma: 2.0
+    focal_weight: 0.0
+    huber_delta: 0.1
+    huber_weight: 0.5
+    l1_weight: 0.5
+    mse_weight: 1.0
+    type: combined
+  optimizer:
+    lr: 0.0001
+    betas:
+    - 0.9
+    - 0.999
+    weight_decay: 0.0001
+  gradient_clip_val: 1.0
+  scheduler:
+    T_max: 100
+    eta_min: 1.0e-06
+    type: cosine_annealing
+    warmup_epochs: 5
