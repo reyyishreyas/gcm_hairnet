@@ -107,7 +107,11 @@ python -c "import torch; print(torch.__version__); from models import build_mode
 
 ## Dataset
 
-The dataset is **not included** in this repository. Place processed data in `data/processed/`:
+The dataset is **not included** in this repository. Download the processed data from Google Drive and place it in `data/processed/`:
+
+**[Download Dataset (Google Drive)](https://drive.google.com/drive/folders/PLACEHOLDER_LINK_HERE)**  
+
+After downloading, extract the contents so that the directory structure matches:
 
 ```
 data/processed/
