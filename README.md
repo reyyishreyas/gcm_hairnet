@@ -128,7 +128,7 @@ data/processed/
 
 ## Quick Start
 
-### Train the proposed model
+### 1. Train the proposed model (GCM-HAIRNet)
 
 ```bash
 python scripts/train.py \
@@ -137,28 +137,59 @@ python scripts/train.py \
   --device cuda
 ```
 
-### Run inference
+Checkpoints are saved to `checkpoints/gcm_ablation/full_gcm/` by default.
+
+### 2. Train fusion baselines
+
+```bash
+for config in baseline_image_only baseline_gis_only baseline_concat baseline_addition \
+               baseline_gated baseline_cross_attention baseline_multihead_cross_attention baseline_bilinear; do
+    python scripts/train.py --config $config --root-dir ./data/processed --device cuda
+done
+```
+
+### 3. Train controlled relation-module baselines
+
+```bash
+for config in baselines/baseline_gcm baselines/baseline_vit baselines/baseline_swin \
+               baselines/baseline_graphsage baselines/baseline_mha baselines/baseline_nonlocal; do
+    python scripts/train.py --config $config --root-dir ./data/processed --device cuda
+done
+```
+
+### 4. Run inference
 
 ```bash
 python scripts/inference.py \
   --config inference \
-  --checkpoint ./checkpoints/gcm/best.pt \
+  --checkpoint ./checkpoints/gcm_ablation/full_gcm/best.pt \
   --split test \
   --output-dir ./outputs/inference
 ```
 
-### Evaluate all models
+### 5. Evaluate all models and generate figures
 
 ```bash
+# Test all trained models
 python scripts/evaluate_all_baselines.py
-```
 
-### Generate risk maps
-
-```bash
+# Generate risk maps for all models
 python scripts/generate_all_risk_maps.py \
+  --root-dir ./data/processed \
   --output-dir ./outputs/experiments \
   --splits val test
+
+# Generate comparison figures
+python scripts/generate_per_city_comparison.py
+```
+
+### 6. Run the full experiment suite (train + evaluate + figures)
+
+```bash
+python scripts/run_experiments.py \
+  --root-dir ./data/processed \
+  --device cuda \
+  --output-dir ./outputs
 ```
 
 ---
@@ -168,40 +199,47 @@ python scripts/generate_all_risk_maps.py \
 ```
 ├── configs/                     # YAML experiment configs
 │   ├── train.yaml               # Canonical training config
-│   ├── gcm_ablation/            # Ablation configs
-│   ├── baselines/               # Baseline model configs
-│   └── baseline_*.yaml          # Fusion study configs
+│   ├── default.yaml             # Default hyperparameters
+│   ├── baselines/               # Baseline model configs (GCM, ViT, Swin, etc.)
+│   ├── gcm_ablation/            # GCM component ablation configs
+│   └── baseline_*.yaml          # Fusion study configs (concat, addition, etc.)
 ├── models/                      # Model implementations
-│   ├── baselines/gcm_hairnet_baseline.py
-│   ├── encoders/                # Swin, GIS encoders
-│   ├── fusion/                  # Addition, Concat, Gated, etc.
-│   ├── gcm/                     # Geographic Context Module
-│   ├── decoder/                 # UPerNet decoder
-│   └── relation/                # ViT, Swin, GraphSAGE, MHA, Non-Local
-├── engine/                      # Trainer, Validator, Tester
-├── losses/                      # Combined loss (MSE + L1 + Huber)
-├── metrics/                     # Regression + classification metrics
-├── datasets/                    # DataLoader + transforms
-├── utils/                       # Config, checkpoint, seed, logger
-├── visualization/               # Risk maps, attention maps, plots
-├── scripts/                     # Training/eval scripts
-│   ├── train.py
-│   ├── test.py
-│   ├── inference.py
-│   ├── evaluate_all_baselines.py
-│   ├── generate_all_risk_maps.py
-│   └── generate_comparison_figure.py
+│   ├── gcm_hairnet.py           # Main GCM-HAIRNet model
+│   ├── baselines/               # Baseline variants (ViT, Swin, GraphSAGE, etc.)
+│   ├── encoders/                # SwinV2 and GIS encoders
+│   ├── fusion/                  # Addition, Concat, Gated, Cross-Attention, Bilinear
+│   ├── gcm/                     # Geographic Context Module (priors, transformer)
+│   ├── decoder/                 # UPerNet-style decoder
+│   └── relation/                # Relation modules (MHA, Non-Local, etc.)
+├── engine/                      # Trainer, Validator, Tester, Inferencer
+├── losses/                      # Combined loss (MSE + L1 + Huber + SSIM)
+├── metrics/                     # Regression and classification metrics
+├── datasets/                    # Dataset loading and transforms
+├── utils/                       # Config manager, checkpointing, seeding, logging
+├── visualization/               # Risk map and attention map utilities
+├── scripts/                     # Entry-point scripts
+│   ├── train.py                 # Train any model from a config
+│   ├── test.py                  # Test a trained model
+│   ├── inference.py             # Run inference and save predictions
+│   ├── validate.py              # Validate a checkpoint
+│   ├── ablation.py              # Run GCM ablation study
+│   ├── crossval.py              # K-fold cross-validation
+│   ├── evaluate_all_baselines.py # Evaluate all trained baselines
+│   ├── run_experiments.py       # Master script: train + evaluate all experiments
+│   ├── generate_all_risk_maps.py # Generate risk maps for all models
+│   └── generate_per_city_comparison.py # Generate comparison figures
 ├── docs/
-│   ├── ARCHITECTURE.md          # Full architecture spec
-│   └── SUMMARY.md               # Audit + reorganization summary
+│   ├── ARCHITECTURE.md          # Full architecture specification
+│   ├── ablation.md              # Ablation study details
+│   ├── dataset.md               # Dataset construction details
+│   └── training.md              # Training protocol details
 ├── outputs/experiments/         # All experiment outputs (gitignored)
-│   ├── results/                 # Canonical CSV + comparison figures
-│   ├── fusion/                  # Per-model predictions + risk maps
-│   ├── baseline/                # Baseline predictions + risk maps
+│   ├── results/                 # Canonical CSV, comparison figures
+│   ├── fusion/                  # Per-model predictions and risk maps
+│   ├── baseline/                # Baseline predictions and risk maps
 │   └── ablation/                # Ablation JSON metrics
 ├── checkpoints/                 # Model weights (gitignored)
-├── logs/                        # TensorBoard logs (gitignored)
-├── data/                        # Dataset (gitignored)
+├── data/                        # Dataset (gitignored, download below)
 ├── environment.yml              # Conda environment
 ├── requirements.txt             # pip dependencies
 ├── CITATION.cff                 # Citation metadata
@@ -230,19 +268,47 @@ All experiments use the **same training protocol** for fair comparison:
 | Seed | 42 |
 | Deterministic | true |
 
-### Reproduce fusion study
+### Reproduce all experiments
+
+The single command below trains every fusion variant, baseline, and ablation, then evaluates and saves all results:
 
 ```bash
-# Train all 8 fusion variants
-for config in baseline_image_only baseline_gis_only baseline_concat baseline_addition baseline_gated baseline_cross_attention baseline_multihead_cross_attention baseline_bilinear; do
-    python scripts/train.py --config $config --root-dir ./data/processed --device cuda
-done
+python scripts/run_experiments.py \
+  --root-dir ./data/processed \
+  --device cuda \
+  --output-dir ./outputs
 ```
 
-### Reproduce controlled baselines
+To skip training and only evaluate existing checkpoints:
 
 ```bash
-for config in baselines/baseline_gcm baselines/baseline_vit baselines/baseline_swin baselines/baseline_graphsage baselines/baseline_mha baselines/baseline_nonlocal; do
+python scripts/run_experiments.py \
+  --root-dir ./data/processed \
+  --device cuda \
+  --output-dir ./outputs \
+  --skip-train
+```
+
+### Reproduce specific experiments
+
+```bash
+# Fusion study only
+for config in baseline_image_only baseline_gis_only baseline_concat baseline_addition \
+               baseline_gated baseline_cross_attention baseline_multihead_cross_attention baseline_bilinear; do
+    python scripts/train.py --config $config --root-dir ./data/processed --device cuda
+done
+
+# Controlled baselines only
+for config in baselines/baseline_gcm baselines/baseline_vit baselines/baseline_swin \
+               baselines/baseline_graphsage baselines/baseline_mha baselines/baseline_nonlocal; do
+    python scripts/train.py --config $config --root-dir ./data/processed --device cuda
+done
+
+# GCM ablations only
+for config in gcm_ablation/full_gcm gcm_ablation/no_distance gcm_ablation/no_similarity \
+               gcm_ablation/no_road gcm_ablation/no_urban gcm_ablation/no_learned \
+               gcm_ablation/no_scene_weights gcm_ablation/no_gcm gcm_ablation/no_gct \
+               gcm_ablation/no_gct_no_gcm; do
     python scripts/train.py --config $config --root-dir ./data/processed --device cuda
 done
 ```
@@ -254,10 +320,12 @@ done
 python scripts/evaluate_all_baselines.py
 
 # Generate risk maps
-python scripts/generate_all_risk_maps.py --output-dir ./outputs/experiments
+python scripts/generate_all_risk_maps.py \
+  --root-dir ./data/processed \
+  --output-dir ./outputs/experiments \
+  --splits val test
 
 # Generate comparison figures
-python scripts/generate_comparison_figure.py
 python scripts/generate_per_city_comparison.py
 ```
 

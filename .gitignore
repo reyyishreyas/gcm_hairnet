@@ -47,3 +47,6 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Generated documentation
+REPOSITORY_CODE.md
