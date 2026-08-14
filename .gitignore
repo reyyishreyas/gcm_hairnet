@@ -50,3 +50,8 @@ logs/
 
 # Generated documentation
 REPOSITORY_CODE.md
+
+# Paper files (kept locally, not published)
+main.tex
+references.bib
+paper.pdf
